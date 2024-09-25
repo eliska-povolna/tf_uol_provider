@@ -15,79 +15,95 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// Ensure ScaffoldingProvider satisfies various provider interfaces.
-var _ provider.Provider = &ScaffoldingProvider{}
-var _ provider.ProviderWithFunctions = &ScaffoldingProvider{}
+// Ensure uolProvider satisfies various provider interfaces.
+var _ provider.Provider = &uolProvider{}
 
-// ScaffoldingProvider defines the provider implementation.
-type ScaffoldingProvider struct {
-	// version is set to the provider version on release, "dev" when the
-	// provider is built and ran locally, and "test" when running acceptance
-	// testing.
-	version string
+// uolProvider defines the provider implementation.
+type uolProvider struct {
+	client *Client
 }
 
-// ScaffoldingProviderModel describes the provider data model.
-type ScaffoldingProviderModel struct {
-	Endpoint types.String `tfsdk:"endpoint"`
+// uolProviderModel describes the provider data model.
+type uolProviderModel struct {
+	Email types.String `tfsdk:"email"`
+	Token types.String `tfsdk:"token"`
 }
 
-func (p *ScaffoldingProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
-	resp.TypeName = "scaffolding"
-	resp.Version = p.version
+func (p *uolProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
+	resp.TypeName = "uol"
 }
 
-func (p *ScaffoldingProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
+func (p *uolProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"endpoint": schema.StringAttribute{
-				MarkdownDescription: "Example provider attribute",
-				Optional:            true,
+			"email": schema.StringAttribute{
+				Description: "Email for API authentication",
+				Required:    true,
+			},
+			"token": schema.StringAttribute{
+				Description: "API token for authentication",
+				Required:    true,
 			},
 		},
 	}
 }
 
-func (p *ScaffoldingProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-	var data ScaffoldingProviderModel
+func (p *uolProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+	var config uolProviderModel
 
-	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
-
+	// Retrieve provider configuration
+	diags := req.Config.Get(ctx, &config)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Configuration values are now available.
-	// if data.Endpoint.IsNull() { /* ... */ }
+	// Initialize email and token
+	var email, token string
 
-	// Example client configuration for data sources and resources
-	client := http.DefaultClient
+	// Check if the email is provided and valid
+	if !config.Email.IsNull() {
+		email = config.Email.ValueString()
+	} else {
+		resp.Diagnostics.AddError("Missing Email", "The provider configuration is missing the 'email' attribute.")
+		return
+	}
+
+	// Check if the token is provided and valid
+	if !config.Token.IsNull() {
+		token = config.Token.ValueString()
+	} else {
+		resp.Diagnostics.AddError("Missing Token", "The provider configuration is missing the 'token' attribute.")
+		return
+	}
+	// Set up the API client
+	client := &Client{
+		Email:      email,
+		Token:      token,
+		HttpClient: &http.Client{},
+	}
 	resp.DataSourceData = client
 	resp.ResourceData = client
+	p.client = client
 }
 
-func (p *ScaffoldingProvider) Resources(ctx context.Context) []func() resource.Resource {
+func (p *uolProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		NewExampleResource,
+		func() resource.Resource {
+			return NewContactResource(p.client)
+		},
 	}
 }
 
-func (p *ScaffoldingProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{
-		NewExampleDataSource,
-	}
+func (p *uolProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
+	return []func() datasource.DataSource{}
 }
 
-func (p *ScaffoldingProvider) Functions(ctx context.Context) []func() function.Function {
-	return []func() function.Function{
-		NewExampleFunction,
-	}
+func (p *uolProvider) Functions(ctx context.Context) []func() function.Function {
+	return []func() function.Function{}
 }
 
-func New(version string) func() provider.Provider {
-	return func() provider.Provider {
-		return &ScaffoldingProvider{
-			version: version,
-		}
-	}
+// Implement the provider
+func New() provider.Provider {
+	return &uolProvider{}
 }
