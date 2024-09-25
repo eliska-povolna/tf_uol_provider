@@ -39,9 +39,9 @@ Then commit the changes to `go.mod` and `go.sum`.
 
 ## Using the provider
 
-You can create UOL contacts using the terraform configuration.
+You can create UOL contacts using the terraform configuration. It is now set to update the demo UOL app.
 
-Since the provider is only local right now, you also need to change your terraform.rc in AppData directory to
+Since the provider is only local right now, you also need to change your `terraform.rc` in AppData directory to
 
 ```
 provider_installation {

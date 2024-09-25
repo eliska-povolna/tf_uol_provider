@@ -20,6 +20,7 @@ type contactResource struct {
 // Define the data model for the resource
 type contactResourceModel struct {
 	Name types.String `tfsdk:"name"`
+	ID   types.String `tfsdk:"id"`
 }
 
 // Implement Metadata method
@@ -34,6 +35,10 @@ func (r *contactResource) Schema(ctx context.Context, req resource.SchemaRequest
 			"name": schema.StringAttribute{
 				Description: "Name of the contact",
 				Required:    true,
+			},
+			"id": schema.StringAttribute{
+				Description: "ID of the contact",
+				Required:    false,
 			},
 		},
 	}
@@ -57,8 +62,6 @@ func (r *contactResource) Create(ctx context.Context, req resource.CreateRequest
 		resp.Diagnostics.AddError("Error encoding request body", err.Error())
 		return
 	}
-	resp.Diagnostics.AddWarning("Request Body", string(body))
-	resp.Diagnostics.AddWarning("Client attributes", r.client.Email+" "+r.client.Token)
 
 	if r.client == nil {
 		resp.Diagnostics.AddError("Client not initialized", "The client is nil. Ensure the client is properly initialized before making requests.")
@@ -125,8 +128,8 @@ func (r *contactResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	apiURL := "https://test.ucetnictvi.uol.cz/api/v1/contacts/"
-	httpReq, err := http.NewRequest("PUT", apiURL, bytes.NewBuffer(body))
+	apiURL := fmt.Sprintf("https://test.ucetnictvi.uol.cz/api/v1/contacts/%s", plan.ID.ValueString())
+	httpReq, err := http.NewRequest("PATCH", apiURL, bytes.NewBuffer(body))
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating HTTP request", err.Error())
 		return
@@ -144,28 +147,8 @@ func (r *contactResource) Update(ctx context.Context, req resource.UpdateRequest
 
 // Implement Delete method
 func (r *contactResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state contactResourceModel
-	diags := req.State.Get(ctx, &state)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	resp.Diagnostics.AddError("Error deleting contact", "The delete operation is not supported for the contact resource.")
 
-	apiURL := "https://test.ucetnictvi.uol.cz/api/v1/contacts/"
-	httpReq, err := http.NewRequest("DELETE", apiURL, nil)
-	if err != nil {
-		resp.Diagnostics.AddError("Error creating HTTP request", err.Error())
-		return
-	}
-
-	httpResp, err := r.client.makeRequest(httpReq)
-	if err != nil || httpResp.StatusCode != http.StatusNoContent {
-		resp.Diagnostics.AddError("Error deleting contact", fmt.Sprintf("API call failed with status code: %d", httpResp.StatusCode))
-		return
-	}
-
-	// After deleting the resource, remove it from state
-	resp.State.RemoveResource(ctx)
 }
 
 // Constructor for contactResource

@@ -14,5 +14,6 @@ provider "uol" {
 }
 
 resource "uol_contact" "example_contact" {
-  name = "John Doe"
+  name = "John Does"
+  id = "john_doe"
 }
