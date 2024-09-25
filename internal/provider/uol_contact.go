@@ -38,7 +38,7 @@ func (r *contactResource) Schema(ctx context.Context, req resource.SchemaRequest
 			},
 			"id": schema.StringAttribute{
 				Description: "ID of the contact",
-				Required:    false,
+				Optional:    true,
 			},
 		},
 	}
